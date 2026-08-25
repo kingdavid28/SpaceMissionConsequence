@@ -1,0 +1,10 @@
+{
+  "description": "Empowering astronauts with real-time decision-making, this app offers crisis management, predictive alerts, and offline guidance for mission success.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

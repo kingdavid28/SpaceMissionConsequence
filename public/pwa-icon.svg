@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#060a10"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+  <circle cx="256" cy="256" r="110" fill="none" stroke="rgba(0,212,255,0.35)" stroke-width="2"/>
+  <circle cx="256" cy="256" r="72" fill="none" stroke="rgba(0,212,255,0.6)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="40" fill="none" stroke="#00d4ff" stroke-width="5"/>
+  <circle cx="256" cy="256" r="14" fill="#00d4ff"/>
+  <circle cx="256" cy="144" r="10" fill="#00d4ff"/>
+  <circle cx="344" cy="212" r="6" fill="rgba(0,212,255,0.6)"/>
+  <circle cx="168" cy="300" r="6" fill="rgba(0,212,255,0.6)"/>
+  <text x="256" y="430" text-anchor="middle" font-family="monospace" font-size="44" font-weight="bold" letter-spacing="10" fill="#00d4ff">MCE</text>
+  <text x="256" y="464" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="3" fill="rgba(0,212,255,0.45)">MISSION CONSEQUENCE ENGINE</text>
+</svg>
