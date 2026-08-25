@@ -1,17 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTelemetry, type Alert, type AlertLevel, type TelemetryItem } from './telemetry'
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type AlertLevel = 'stable' | 'warning' | 'critical'
 type Tab = 'eclss' | 'power' | 'comms' | 'mission'
-
-interface Alert {
-  id: number
-  level: AlertLevel
-  system: string
-  message: string
-  prediction: string
-  time: string
-}
 
 interface Decision {
   id: number
@@ -19,14 +10,6 @@ interface Decision {
   action: string
   consequence: string
   risk: AlertLevel
-}
-
-interface TelemetryItem {
-  label: string
-  value: string
-  unit: string
-  percent: number
-  status: AlertLevel
 }
 
 interface GuidanceStep {
@@ -279,21 +262,9 @@ function Panel({ children, title, status, className = '', style = {} }: {
 
 // ── ECLSS Tab ──────────────────────────────────────────────────────────────
 function EclssTab() {
-  const gauges = [
-    { value: 20.9, max: 25, label: 'O₂ Level', unit: '%', status: 'stable' as AlertLevel },
-    { value: 0.04, max: 0.5, label: 'CO₂', unit: '%', status: 'stable' as AlertLevel },
-    { value: 22.1, max: 30, label: 'Temp', unit: '°C', status: 'stable' as AlertLevel },
-    { value: 74, max: 100, label: 'Humidity', unit: '%', status: 'warning' as AlertLevel },
-  ]
-
-  const bars: TelemetryItem[] = [
-    { label: 'Cabin Pressure', value: '101.3', unit: 'kPa', percent: 82, status: 'stable' },
-    { label: 'N₂ Partial Pressure', value: '79.1', unit: 'kPa', percent: 79, status: 'stable' },
-    { label: 'Water Recovery', value: '93.4', unit: '%', percent: 93, status: 'stable' },
-    { label: 'CO₂ Scrubber Load', value: '61', unit: '%', percent: 61, status: 'warning' },
-    { label: 'CDRA Cycle', value: '4/8', unit: 'hrs', percent: 50, status: 'stable' },
-    { label: 'Trace Contaminants', value: '0.8', unit: 'ppm', percent: 16, status: 'stable' },
-  ]
+  const { eclss } = useTelemetry()
+  const { gauges, bars } = eclss
+  const co2Scrubber = bars.find((b) => b.label === 'CO₂ Scrubber Load')
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -322,7 +293,7 @@ function EclssTab() {
           fontSize: 10,
           color: '#f5a623',
         }}>
-          ⚠ CO₂ scrubber at 61% — schedule lithium hydroxide canister swap within 14 hrs
+          ⚠ CO₂ scrubber at {co2Scrubber ? co2Scrubber.value + '%' : '61%'} — schedule lithium hydroxide canister swap within 14 hrs
         </div>
       </Panel>
 
@@ -1004,40 +975,7 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  const alerts: Alert[] = [
-    {
-      id: 1,
-      level: 'critical',
-      system: 'Power',
-      message: 'BAT-3 core temp elevated to 31.4°C (+2.1°C over baseline)',
-      prediction: 'Battery temp +2°C → Main system failure in 7h 54m',
-      time: '14:38:22',
-    },
-    {
-      id: 2,
-      level: 'warning',
-      system: 'ECLSS',
-      message: 'CO₂ scrubber LiOH canister at 61% capacity',
-      prediction: 'At current rate, canister depletion in ~14 hours',
-      time: '14:22:07',
-    },
-    {
-      id: 3,
-      level: 'warning',
-      system: 'Comms',
-      message: 'TDRS-West signal degraded — 71% nominal bandwidth',
-      prediction: 'Solar weather event may cause further 20% drop in 3h',
-      time: '13:58:44',
-    },
-    {
-      id: 4,
-      level: 'stable',
-      system: 'Navigation',
-      message: 'Attitude control nominal — gyro torques within spec',
-      prediction: 'Next scheduled reboost in 18 days',
-      time: '12:44:18',
-    },
-  ]
+  const { alerts } = useTelemetry()
 
   const tabs: { id: Tab; label: string; alertLevel: AlertLevel }[] = [
     { id: 'eclss', label: 'Life Support', alertLevel: 'warning' },
