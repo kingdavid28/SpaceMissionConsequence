@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import type { TrendData } from './ai'
 
 export type AlertLevel = 'stable' | 'warning' | 'critical'
 
@@ -36,6 +37,7 @@ export interface TelemetryState {
   eclss: EclssData
   alerts: Alert[]
   connected: boolean
+  trends: TrendData | null
 }
 
 const DEFAULT_ECLSS: EclssData = {
@@ -94,6 +96,7 @@ const DEFAULT_STATE: TelemetryState = {
   eclss: DEFAULT_ECLSS,
   alerts: DEFAULT_ALERTS,
   connected: false,
+  trends: null,
 }
 
 const TelemetryContext = createContext<TelemetryState | null>(null)
@@ -116,8 +119,9 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
           if (packet.type === 'init' || packet.type === 'telemetry') {
             setState((prev) => ({
               ...prev,
-              eclss: packet.data?.eclss ?? prev.eclss,
+              eclss: packet.eclss ?? prev.eclss,
               alerts: packet.alerts ?? prev.alerts,
+              trends: packet.trends ?? prev.trends,
             }))
           }
         } catch (err) {

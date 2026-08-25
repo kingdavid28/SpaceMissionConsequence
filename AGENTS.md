@@ -39,3 +39,13 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 - Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
 - Ensure JSX tags are closed and braces are balanced.
 - Export components as default exports.
+
+
+# Terminal 1 — telemetry server
+pnpm telemetry
+
+# Terminal 2 — Vite dev server (already running in Figma Make)
+pnpm dev
+
+# Optional: inject a BAT-3 anomaly to watch the AI respond
+curl -X POST http://localhost:4000/inject -H "Content-Type: application/json" -d '{"anomaly":"bat3","active":true}'

@@ -117,7 +117,83 @@ html, body, #root {
 .data-stream { animation: data-stream 3s ease-in-out infinite; }
 
 .gauge-ring {
-  transition: stroke-dashoffset 1s ease-in-out;
+  transition: stroke-dasharray 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.5s ease;
+}
+
+/* ── Toast progress bar keyframe ─────────────────────────────────────────── */
+@keyframes toast-progress {
+  from { width: 100%; }
+  to   { width: 0%;   }
+}
+
+/* ── Responsive layout ───────────────────────────────────────────────────── */
+
+/* Tablet: collapse sidebar, stack tabs */
+@media (max-width: 900px) {
+  .mce-layout {
+    flex-direction: column !important;
+  }
+  .mce-sidebar {
+    width: 100% !important;
+    max-height: 220px;
+    border-right: none !important;
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: row !important;
+    overflow-x: auto;
+  }
+  .mce-sidebar-alerts {
+    flex-direction: row !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  .mce-tabs {
+    overflow-x: auto;
+  }
+  .mce-tabs button {
+    flex-shrink: 0;
+    padding: 10px 14px !important;
+  }
+  .mce-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .mce-grid-2 [style*="gridColumn: span 2"],
+  .mce-grid-2 [style*="grid-column: span 2"] {
+    grid-column: span 1 !important;
+  }
+}
+
+/* Mobile: full-width single column, compact header */
+@media (max-width: 600px) {
+  .mce-header {
+    padding: 0 10px !important;
+    gap: 8px !important;
+    height: 48px !important;
+  }
+  .mce-header .mce-met {
+    display: none;
+  }
+  .mce-header .mce-utc {
+    display: none;
+  }
+  .mce-sidebar {
+    max-height: 180px;
+  }
+  .mce-tabs button span[style*="letterSpacing"] {
+    font-size: 10px !important;
+    letter-spacing: 0.08em !important;
+  }
+  .mce-tabs button {
+    padding: 8px 10px !important;
+  }
+  .mce-grid-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .mce-grid-ai {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .hex-bg {

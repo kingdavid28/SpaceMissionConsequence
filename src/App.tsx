@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTelemetry, type Alert, type AlertLevel, type TelemetryItem } from './telemetry'
+import AISummaryPanel from './AISummaryPanel'
+import AIAnomalyPanel from './AIAnomalyPanel'
+import ProcedureQA from './ProcedureQA'
+import { scoreDecisions, type DecisionScore, type CrisisContext } from './ai'
+import { useToasts, ToastStack } from './Toast'
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type Tab = 'eclss' | 'power' | 'comms' | 'mission'
+type Tab = 'eclss' | 'power' | 'comms' | 'mission' | 'ai'
 
 interface Decision {
   id: number
@@ -269,7 +274,7 @@ function EclssTab() {
   const co2Scrubber = bars.find((b) => b.label === 'CO₂ Scrubber Load')
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="mce-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <Panel title="Atmosphere Composition" status="stable" style={{ gridColumn: 'span 2' }}>
         <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: 16, padding: '4px 0' }}>
           {gauges.map(g => <RadialGauge key={g.label} {...g} size={96} />)}
@@ -330,7 +335,7 @@ function PowerTab() {
   ]
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="mce-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <Panel title="Solar Array Output" status="stable" style={{ gridColumn: 'span 2' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {['SA-1A', 'SA-1B', 'SA-2A', 'SA-2B'].map((id, i) => {
@@ -452,9 +457,9 @@ function CommsTab({ isOffline }: { isOffline: boolean }) {
   ]
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="mce-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <Panel title="Link Status" status={isOffline ? 'critical' : 'stable'} style={{ gridColumn: 'span 2' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <div className="mce-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
           {links.map(l => (
             <div key={l.id} style={{
               padding: '12px',
@@ -547,7 +552,7 @@ function MissionTab() {
   ]
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="mce-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <Panel title="Mission Schedule" status="stable" style={{ gridColumn: 'span 2' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {[
@@ -802,7 +807,11 @@ function OfflineGuidance({ onClose }: { onClose: () => void }) {
 
 // ── Crisis Decision Panel ───────────────────────────────────────────────────
 function CrisisPanel({ onDismiss }: { onDismiss: () => void }) {
+  const { eclss, alerts, trends } = useTelemetry()
   const [selected, setSelected] = useState<number | null>(null)
+  const [aiScores, setAiScores] = useState<DecisionScore[] | null>(null)
+  const [scoring, setScoring] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const decisions: Decision[] = [
     {
@@ -828,26 +837,89 @@ function CrisisPanel({ onDismiss }: { onDismiss: () => void }) {
     },
   ]
 
+  // Auto-score on mount using live sensor state
+  useEffect(() => {
+    const o2Gauge = eclss.gauges.find(g => g.label === 'O₂ Level')
+    const bat3Alert = alerts.find(a => a.system === 'Power')
+    const batTrend = trends?.bat3Temp ?? []
+    const slope = batTrend.length >= 2
+      ? batTrend[batTrend.length - 1] - batTrend[batTrend.length - 2]
+      : 0
+
+    const ctx: CrisisContext = {
+      bat3Temp: batTrend[batTrend.length - 1] ?? 31.4,
+      bat3TempTrend: slope > 0.01 ? 'rising' : slope < -0.01 ? 'falling' : 'stable',
+      scrubLoad: Number(eclss.bars.find(b => b.label === 'CO₂ Scrubber Load')?.value ?? 61),
+      o2Level: o2Gauge?.value ?? 20.9,
+      tdrsSignal: trends?.tdrsWest?.[trends.tdrsWest.length - 1] ?? 71,
+      backupReserve: 62,
+    }
+
+    setScoring(true)
+    scoreDecisions(ctx)
+      .then(setAiScores)
+      .finally(() => setScoring(false))
+
+    void bat3Alert // consumed for context above
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scoreMap = aiScores ? Object.fromEntries(aiScores.map(s => [s.id, s])) : {}
+
+  // Focus the dialog on mount; restore focus on unmount
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
+    return () => prev?.focus()
+  }, [])
+
+  // Keyboard: Escape → dismiss; 1/2/3 → select option; Enter → confirm
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onDismiss(); return }
+      if (e.key === '1') setSelected(1)
+      if (e.key === '2') setSelected(2)
+      if (e.key === '3') setSelected(3)
+      if (e.key === 'Enter' && selected !== null) onDismiss()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selected, onDismiss])
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 90,
-      background: 'var(--color-overlay)',
-      backdropFilter: 'blur(6px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
-    }}>
-      <div className="corner-clip" style={{
-        background: 'var(--color-card)',
-        border: '1px solid rgba(255,59,59,0.4)',
-        maxWidth: 620,
-        width: '100%',
-        boxShadow: '0 0 60px rgba(255,59,59,0.12)',
-      }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="crisis-title"
+      aria-describedby="crisis-desc"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 90,
+        background: 'var(--color-overlay)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="corner-clip"
+        style={{
+          background: 'var(--color-card)',
+          border: '1px solid rgba(255,59,59,0.4)',
+          maxWidth: 660,
+          width: '100%',
+          boxShadow: '0 0 60px rgba(255,59,59,0.12)',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          outline: 'none',
+        }}
+      >
         <div style={{
           padding: '14px 20px',
           borderBottom: '1px solid rgba(255,59,59,0.3)',
           background: 'rgba(255,59,59,0.06)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          position: 'sticky', top: 0, zIndex: 1,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ color: '#ff3b3b', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em' }} className="alert-critical">■ CRISIS DECISION REQUIRED</span>
@@ -865,53 +937,118 @@ function CrisisPanel({ onDismiss }: { onDismiss: () => void }) {
             borderRadius: 2,
             marginBottom: 16,
           }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: '#ff3b3b', marginBottom: 4, letterSpacing: '0.05em' }}>
+            <div id="crisis-title" style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: '#ff3b3b', marginBottom: 4, letterSpacing: '0.05em' }}>
               BAT-3 Temperature Anomaly — Predicted Main Bus Failure
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-card-foreground)' }}>
+            <div id="crisis-desc" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-card-foreground)' }}>
               Battery temp rising at +0.25°C/hr. Projected failure: T+7h54m. Immediate load management required.
+              <span style={{ display: 'block', marginTop: 4, fontSize: 9, color: 'var(--color-muted-foreground)' }}>
+                Keyboard: 1 / 2 / 3 to select · Enter to confirm · Esc to defer
+              </span>
             </div>
           </div>
 
+          {/* AI Scoring header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+          }}>
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+              color: 'var(--color-muted-foreground)',
+            }}>
+              Response Options
+            </span>
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9,
+              padding: '1px 5px',
+              background: 'rgba(0,212,255,0.06)',
+              border: '1px solid rgba(0,212,255,0.18)',
+              borderRadius: 2, color: 'var(--color-primary)',
+              letterSpacing: '0.08em',
+            }}>
+              {scoring ? 'AI SCORING…' : aiScores ? 'AI SCORED' : 'AI SCORING'}
+            </span>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {decisions.map(d => (
-              <button
-                key={d.id}
-                onClick={() => setSelected(d.id)}
-                style={{
-                  textAlign: 'left',
-                  background: selected === d.id ? alertBg[d.risk] : 'var(--color-fill)',
-                  border: `1px solid ${selected === d.id ? alertBorder[d.risk] : 'var(--color-border)'}`,
-                  borderRadius: 2,
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex', gap: 12, alignItems: 'flex-start',
-                }}
-              >
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.12em',
-                  color: alertColor[d.risk],
-                  padding: '3px 6px',
-                  border: `1px solid ${alertBorder[d.risk]}`,
-                  borderRadius: 2,
-                  flexShrink: 0,
-                  marginTop: 1,
-                }}>
-                  {d.label}
-                </span>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--color-foreground)', marginBottom: 3, letterSpacing: '0.03em' }}>
-                    {d.action}
+            {decisions.map(d => {
+              const score = scoreMap[d.id]
+              const isRecommended = score?.recommended === true
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setSelected(d.id)}
+                  style={{
+                    textAlign: 'left',
+                    background: selected === d.id ? alertBg[d.risk] : 'var(--color-fill)',
+                    border: `1px solid ${selected === d.id ? alertBorder[d.risk] : isRecommended ? 'rgba(0,212,255,0.35)' : 'var(--color-border)'}`,
+                    borderRadius: 2,
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex', gap: 12, alignItems: 'flex-start',
+                    outline: isRecommended && selected !== d.id ? '1px solid rgba(0,212,255,0.15)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, minWidth: 64 }}>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 10, letterSpacing: '0.12em',
+                      color: alertColor[d.risk],
+                      padding: '3px 6px',
+                      border: `1px solid ${alertBorder[d.risk]}`,
+                      borderRadius: 2, width: '100%', textAlign: 'center',
+                    }}>
+                      {d.label}
+                    </span>
+                    {/* AI safety score bar */}
+                    {score ? (
+                      <div style={{ width: '100%' }}>
+                        <div style={{ height: 4, background: 'var(--color-track)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${score.score}%`,
+                            background: score.score >= 80 ? '#00ff9d' : score.score >= 55 ? '#f5a623' : '#ff3b3b',
+                            borderRadius: 2,
+                            transition: 'width 0.6s ease',
+                          }} />
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)', textAlign: 'center', marginTop: 2 }}>
+                          {score.score}/100
+                        </div>
+                        {isRecommended && (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#00d4ff', textAlign: 'center', letterSpacing: '0.08em' }}>
+                            ✓ AI REC
+                          </div>
+                        )}
+                      </div>
+                    ) : scoring ? (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)' }} className="blink">…</div>
+                    ) : null}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                    {d.consequence}
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--color-foreground)', marginBottom: 3, letterSpacing: '0.03em' }}>
+                      {d.action}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-muted-foreground)', marginBottom: score?.rationale ? 4 : 0 }}>
+                      {d.consequence}
+                    </div>
+                    {score?.rationale && (
+                      <div style={{
+                        fontFamily: 'var(--font-mono)', fontSize: 10,
+                        color: '#00d4ff', opacity: 0.85,
+                        borderTop: '1px solid var(--color-border)',
+                        paddingTop: 4, marginTop: 2,
+                      }}>
+                        ⟶ {score.rationale}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
 
           <button
@@ -977,13 +1114,53 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  const { alerts } = useTelemetry()
+  // Handle PWA home-screen shortcut deep-links (?shortcut=crisis|procedures|ai)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const shortcut = params.get('shortcut')
+    if (shortcut === 'crisis')     { setShowCrisis(true) }
+    if (shortcut === 'procedures') { setTab('ai') }
+    if (shortcut === 'ai')         { setTab('ai') }
+  }, [])
+
+  const { alerts, connected } = useTelemetry()
+  const { toasts, pushToast, dismissToast } = useToasts()
+
+  // Toast on new critical/warning alerts
+  const prevAlertLevelsRef = useRef<Record<number, string>>({})
+  const handleAlerts = useCallback(() => {
+    const prev = prevAlertLevelsRef.current
+    for (const a of alerts) {
+      const wasLevel = prev[a.id]
+      if (wasLevel !== a.level) {
+        if (a.level === 'critical') {
+          pushToast({
+            level: 'critical',
+            title: `${a.system} — Critical Alert`,
+            body: a.message,
+            duration: 8000,
+          })
+        } else if (a.level === 'warning' && wasLevel === 'stable') {
+          pushToast({
+            level: 'warning',
+            title: `${a.system} — Warning`,
+            body: a.message,
+            duration: 6000,
+          })
+        }
+      }
+    }
+    prevAlertLevelsRef.current = Object.fromEntries(alerts.map(a => [a.id, a.level]))
+  }, [alerts, pushToast])
+
+  useEffect(() => { handleAlerts() }, [handleAlerts])
 
   const tabs: { id: Tab; label: string; alertLevel: AlertLevel }[] = [
     { id: 'eclss', label: 'Life Support', alertLevel: 'warning' },
     { id: 'power', label: 'Power', alertLevel: 'critical' },
     { id: 'comms', label: 'Comms', alertLevel: isOffline ? 'critical' : 'warning' },
     { id: 'mission', label: 'Mission', alertLevel: 'stable' },
+    { id: 'ai', label: 'AI Co-Pilot', alertLevel: 'stable' },
   ]
 
   return (
@@ -993,8 +1170,17 @@ export default function App() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      {/* Hidden aria-live region for screen reader alert announcements */}
+      <div
+        aria-live="assertive"
+        aria-atomic="true"
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+      >
+        {alerts.filter(a => a.level === 'critical').map(a => a.message).join('. ')}
+      </div>
+
       {/* Header */}
-      <header style={{
+      <header className="mce-header" style={{
         borderBottom: '1px solid var(--color-border)',
         background: 'var(--color-header)',
         backdropFilter: 'blur(12px)',
@@ -1043,11 +1229,11 @@ export default function App() {
         <div style={{ width: 1, height: 24, background: 'var(--color-border)' }} />
 
         {/* MET Clock */}
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-primary)', letterSpacing: '0.05em' }}>
+        <div className="mce-met" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-primary)', letterSpacing: '0.05em' }}>
           {missionElapsed()}
         </div>
 
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted-foreground)' }}>
+        <div className="mce-utc" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted-foreground)' }}>
           {fmtTime(time)}
         </div>
 
@@ -1108,6 +1294,16 @@ export default function App() {
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: isOffline ? '#ff3b3b' : '#00ff9d', letterSpacing: '0.1em' }}>
             {isOffline ? 'OFFLINE' : 'EARTH LINK'}
           </span>
+          {/* Telemetry server connection dot */}
+          <span
+            title={connected ? 'Telemetry live' : 'Telemetry offline'}
+            style={{
+              width: 4, height: 4, borderRadius: '50%',
+              background: connected ? '#00d4ff' : '#5a7a9a',
+              boxShadow: connected ? '0 0 4px #00d4ff' : 'none',
+              display: 'inline-block', marginLeft: 2,
+            }}
+          />
         </button>
 
         {/* Crisis button */}
@@ -1151,9 +1347,9 @@ export default function App() {
         </button>
       </header>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+      <div className="mce-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         {/* Sidebar — Alerts */}
-        <aside style={{
+        <aside className="mce-sidebar" style={{
           width: 280,
           flexShrink: 0,
           borderRight: '1px solid var(--color-border)',
@@ -1185,7 +1381,8 @@ export default function App() {
               {alerts.filter(a => a.level !== 'stable').length} ACTIVE
             </span>
           </div>
-          <div style={{ flex: 1, overflow: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="mce-sidebar-alerts" style={{ flex: 1, overflow: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
+               role="log" aria-label="Threat alerts" aria-live="polite">
             {alerts.map(a => <AlertCard key={a.id} alert={a} />)}
           </div>
 
@@ -1219,7 +1416,7 @@ export default function App() {
         {/* Main content */}
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
           {/* Tabs */}
-          <div style={{
+          <div className="mce-tabs" role="tablist" aria-label="Dashboard sections" style={{
             display: 'flex',
             borderBottom: '1px solid var(--color-border)',
             background: 'var(--color-tabs)',
@@ -1230,6 +1427,9 @@ export default function App() {
               return (
                 <button
                   key={t.id}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`tabpanel-${t.id}`}
                   onClick={() => setTab(t.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 7,
@@ -1264,11 +1464,73 @@ export default function App() {
           </div>
 
           {/* Tab content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+          <div
+            role="tabpanel"
+            id={`tabpanel-${tab}`}
+            aria-label={tabs.find(t => t.id === tab)?.label}
+            style={{ flex: 1, overflow: 'auto', padding: 16 }}
+          >
             {tab === 'eclss' && <EclssTab />}
             {tab === 'power' && <PowerTab />}
             {tab === 'comms' && <CommsTab isOffline={isOffline} />}
             {tab === 'mission' && <MissionTab />}
+            {tab === 'ai' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* AI Mission Summary */}
+                <AISummaryPanel />
+
+                {/* Two-column: anomaly predictions + procedure Q&A */}
+                <div className="mce-grid-ai" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  {/* Anomaly Predictions */}
+                  <div className="corner-clip" style={{
+                    background: 'var(--color-card)',
+                    border: '1px solid var(--color-border)',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      padding: '8px 16px',
+                      borderBottom: '1px solid var(--color-border)',
+                      background: 'var(--color-raised)',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f5a623', boxShadow: '0 0 6px #f5a623', flexShrink: 0 }} className="alert-warning" />
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)' }}>
+                        Predictive Anomaly Detection
+                      </span>
+                    </div>
+                    <div style={{ padding: 16 }}>
+                      <AIAnomalyPanel />
+                    </div>
+                  </div>
+
+                  {/* Procedure Q&A */}
+                  <div className="corner-clip" style={{
+                    background: 'var(--color-card)',
+                    border: '1px solid var(--color-border)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}>
+                    <div style={{
+                      padding: '8px 16px',
+                      borderBottom: '1px solid var(--color-border)',
+                      background: 'var(--color-raised)',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      flexShrink: 0,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 6px #00d4ff', flexShrink: 0 }} />
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)' }}>
+                        Emergency Procedure Assistant
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, padding: '1px 5px', background: 'rgba(0,255,157,0.06)', border: '1px solid rgba(0,255,157,0.2)', borderRadius: 2, color: '#00ff9d', letterSpacing: '0.08em', marginLeft: 'auto' }}>
+                        OFFLINE READY
+                      </span>
+                    </div>
+                    <ProcedureQA />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
@@ -1276,6 +1538,9 @@ export default function App() {
       {/* Overlays */}
       {showGuidance && <OfflineGuidance onClose={() => setShowGuidance(false)} />}
       {showCrisis && <CrisisPanel onDismiss={() => setShowCrisis(false)} />}
+
+      {/* Toast notifications */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }

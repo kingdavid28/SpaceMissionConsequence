@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Typecheck, Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm tsc --noEmit
+
+      - name: Build
+        run: pnpm build
+        env:
+          # Provide empty env vars so Vite doesn't throw on missing imports
+          VITE_WATSONX_URL: ''
+          VITE_WATSONX_API_KEY: ''
+          VITE_WATSONX_PROJECT_ID: ''
+          VITE_OPENAI_API_KEY: ''
+          VITE_TELEMETRY_WS_URL: 'ws://localhost:4000'
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html && echo "✓ index.html"
+          test -f dist/sw.js      && echo "✓ sw.js (service worker)"
+          test -f dist/manifest.webmanifest && echo "✓ manifest.webmanifest"

@@ -41,10 +41,39 @@ export default defineConfig(({ mode }) => {
               purpose: 'any',
             },
           ],
+          // Home-screen shortcuts — available when app is installed
+          shortcuts: [
+            {
+              name: 'Crisis Decision',
+              short_name: 'Crisis',
+              description: 'Open the crisis decision panel immediately',
+              url: '/?shortcut=crisis',
+              icons: [{ src: 'pwa-icon.svg', sizes: 'any' }],
+            },
+            {
+              name: 'Emergency Procedures',
+              short_name: 'Procedures',
+              description: 'Open the offline emergency procedure assistant',
+              url: '/?shortcut=procedures',
+              icons: [{ src: 'pwa-icon.svg', sizes: 'any' }],
+            },
+            {
+              name: 'AI Co-Pilot',
+              short_name: 'AI',
+              description: 'Open the AI threat summary and anomaly detection',
+              url: '/?shortcut=ai',
+              icons: [{ src: 'pwa-icon.svg', sizes: 'any' }],
+            },
+          ],
         },
         workbox: {
+          // Pre-cache all build artifacts so the app shell works fully offline
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // Provide a cached fallback page when the network is unavailable
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/api/, /^\/ws/, /\.json$/],
           runtimeCaching: [
+            // Google Fonts stylesheet — 1-year cache
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
@@ -54,12 +83,24 @@ export default defineConfig(({ mode }) => {
                 cacheableResponse: { statuses: [0, 200] },
               },
             },
+            // Google Fonts files — 1-year cache
             {
               urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            // All other same-origin requests — NetworkFirst with offline fallback
+            {
+              urlPattern: ({ sameOrigin }: { sameOrigin: boolean }) => sameOrigin,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'mce-dynamic-cache',
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
                 cacheableResponse: { statuses: [0, 200] },
               },
             },
