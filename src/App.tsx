@@ -76,6 +76,8 @@ function RadialGauge({
   const gap = circ - arc
   const rotation = -225
   const color = alertColor[status]
+  const decimals = unit === '%' ? (max >= 1 ? 1 : 2) : 1
+  const displayValue = value.toFixed(decimals)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -115,7 +117,7 @@ function RadialGauge({
           }}
         >
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color, lineHeight: 1 }}>
-            {value}
+            {displayValue}
           </span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)', marginTop: 1 }}>
             {unit}
