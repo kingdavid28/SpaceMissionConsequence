@@ -27,7 +27,7 @@ const sevBorder: Record<string, string> = {
 function TrendArrow({ trend }: { trend: AnomalyPrediction['trend'] }) {
   const symbol = trend === 'rising' ? '↑' : trend === 'falling' ? '↓' : '→'
   const color = trend === 'rising' ? '#f5a623' : trend === 'falling' ? '#00d4ff' : '#5a7a9a'
-  return <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 12 }}>{symbol}</span>
+  return <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 14 }}>{symbol}</span>
 }
 
 function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
@@ -46,7 +46,7 @@ function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
       {/* Severity badge */}
       <span style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 9,
+        fontSize: 11,
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: sevColor[pred.severity],
@@ -66,7 +66,7 @@ function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
           <span style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 700,
             letterSpacing: '0.08em',
             color: sevColor[pred.severity],
@@ -75,7 +75,7 @@ function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
           </span>
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 13,
             color: sevColor[pred.severity],
           }}>
             {pred.currentValue.toFixed(pred.unit === '%' && pred.currentValue > 1 ? 1 : 3)}{pred.unit}
@@ -83,7 +83,7 @@ function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
         </div>
         <p style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
+          fontSize: 12,
           color: 'var(--color-muted-foreground)',
           margin: 0,
           lineHeight: 1.5,
@@ -101,12 +101,12 @@ function AnomalyRow({ pred }: { pred: AnomalyPrediction }) {
         alignItems: 'flex-end',
         gap: 2,
       }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)', letterSpacing: '0.08em' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted-foreground)', letterSpacing: '0.08em' }}>
           T-BREACH
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 13,
+          fontSize: 15,
           color: pred.estimatedTimeToBreachMin !== null && pred.estimatedTimeToBreachMin <= 10
             ? '#ff3b3b'
             : sevColor[pred.severity],
@@ -135,7 +135,7 @@ export default function AIAnomalyPanel() {
         border: '1px solid rgba(0,255,157,0.15)',
         borderRadius: 2,
         fontFamily: 'var(--font-mono)',
-        fontSize: 11,
+        fontSize: 13,
         color: '#00ff9d',
         display: 'flex',
         alignItems: 'center',
@@ -157,7 +157,7 @@ export default function AIAnomalyPanel() {
       }}>
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
+          fontSize: 12,
           color: 'var(--color-muted-foreground)',
           letterSpacing: '0.08em',
         }}>
@@ -165,7 +165,7 @@ export default function AIAnomalyPanel() {
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 9,
+          fontSize: 11,
           padding: '1px 5px',
           background: 'rgba(0,212,255,0.06)',
           border: '1px solid rgba(0,212,255,0.18)',

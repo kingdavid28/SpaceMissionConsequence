@@ -1,11 +1,12 @@
 /**
  * MCE AI Service
  *
- * Provides four AI-powered capabilities:
- *  1. naturalLanguageSummary   — plain-English narrative of the current threat picture
- *  2. scoreDecisions           — rank crisis options given live sensor state
- *  3. detectAnomalies          — extrapolate sensor trends, surface early warnings
- *  4. askProcedure             — offline-capable Q&A against cached procedure manual
+ * Provides five AI-powered capabilities:
+ *  1. naturalLanguageSummary     — plain-English narrative of the current threat picture
+ *  2. scoreDecisions             — rank crisis options given live sensor state
+ *  3. detectAnomalies            — extrapolate sensor trends, surface early warnings
+ *  4. askProcedure               — offline-capable Q&A against cached procedure manual
+ *  5. recommendResearchAction    — next best research action given experiment + crew state
  *
  * Provider priority:
  *   VITE_AI_PROVIDER=watsonx | openai | local (default: local)
@@ -25,6 +26,7 @@
  */
 
 import type { Alert, TelemetryState } from './telemetry'
+import type { Experiment } from './nasaOsdr'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -169,19 +171,28 @@ Summarize the current mission threat picture in 3–4 concise sentences.
 Be factual, prioritize life-safety risks, and use plain English suitable for a crew member under stress.
 Do not use bullet points. Do not say "I" or "as an AI". Be direct and actionable.`
 
-function buildSummaryPrompt(alerts: Alert[], telemetry: TelemetryState): string {
+function buildSummaryPrompt(alerts: Alert[], telemetry: TelemetryState, experiments?: Experiment[]): string {
   const activeAlerts = alerts.filter(a => a.level !== 'stable')
   const eclss = telemetry.eclss
   const o2 = eclss.gauges.find(g => g.label === 'O₂ Level')
   const co2 = eclss.gauges.find(g => g.label === 'CO₂')
   const scrub = eclss.bars.find(b => b.label === 'CO₂ Scrubber Load')
 
+  const expLines = experiments && experiments.length > 0
+    ? `\n- Active experiments: ${experiments.filter(e => e.status !== 'stable' || e.progress < 100).map(e => `${e.id} ${e.name} [${e.priority}/${e.status.toUpperCase()}] ${e.progress}%`).join(' | ')}`
+    : ''
+
+  const atRisk = experiments?.filter(e => e.status === 'critical') ?? []
+  const atRiskLine = atRisk.length > 0
+    ? `\n- At-risk experiments: ${atRisk.map(e => e.name).join(', ')}`
+    : ''
+
   return `Current spacecraft status:
 - Active alerts (${activeAlerts.length}): ${activeAlerts.map(a => `[${a.level.toUpperCase()}] ${a.system}: ${a.message}`).join(' | ')}
 - O₂ level: ${o2?.value}% (nominal: 20.9%)
 - CO₂: ${co2?.value}% (limit: 0.5%)
 - CO₂ scrubber load: ${scrub?.value}%
-- Predictions: ${activeAlerts.map(a => a.prediction).join(' | ')}
+- Predictions: ${activeAlerts.map(a => a.prediction).join(' | ')}${expLines}${atRiskLine}
 
 Provide a 3-sentence mission status summary.`
 }
@@ -213,19 +224,20 @@ function localSummary(alerts: Alert[], telemetry: TelemetryState): AISummaryResu
 
 export async function naturalLanguageSummary(
   alerts: Alert[],
-  telemetry: TelemetryState
+  telemetry: TelemetryState,
+  experiments?: Experiment[]
 ): Promise<AISummaryResult> {
   const overallRisk = alerts.some(a => a.level === 'critical') ? 'critical'
     : alerts.some(a => a.level === 'warning') ? 'warning' : 'stable'
 
   try {
     if (hasWatsonx()) {
-      const prompt = `${SUMMARY_SYSTEM}\n\n${buildSummaryPrompt(alerts, telemetry)}`
+      const prompt = `${SUMMARY_SYSTEM}\n\n${buildSummaryPrompt(alerts, telemetry, experiments)}`
       const narrative = await watsonxGenerate(prompt, 200)
       return { narrative, overallRisk, generatedBy: 'watsonx' }
     }
     if (hasOpenAI()) {
-      const narrative = await openaiGenerate(SUMMARY_SYSTEM, buildSummaryPrompt(alerts, telemetry), 200)
+      const narrative = await openaiGenerate(SUMMARY_SYSTEM, buildSummaryPrompt(alerts, telemetry, experiments), 200)
       return { narrative, overallRisk, generatedBy: 'openai' }
     }
   } catch (err) {
@@ -591,4 +603,146 @@ export async function askProcedure(question: string): Promise<ProcedureAnswer> {
     ref: 'IFS General',
     generatedBy: 'local',
   }
+}
+
+// ── 5. Research Action Recommendation ─────────────────────────────────────
+
+export interface ResearchRecommendation {
+  action: string
+  rationale: string
+  urgency: 'immediate' | 'next-shift' | 'routine'
+  experimentId: string | null
+  generatedBy: 'watsonx' | 'openai' | 'local'
+}
+
+const RESEARCH_SYSTEM = `You are a mission science officer AI for a crewed ISS mission.
+Given the current experiment status, crew fatigue, and any active system anomalies, recommend the single most important research action the crew should take next.
+Be specific and actionable in one sentence. State which experiment and why. Do not use bullet points or say "I".`
+
+function buildResearchPrompt(experiments: Experiment[], crewMaxFatigue: number, activeAlertSystems: string[]): string {
+  const running = experiments.filter(e => e.progress < 100)
+  const atRisk  = running.filter(e => e.status === 'critical')
+  const p1      = running.filter(e => e.priority === 'P1')
+
+  return `Experiment status:
+${running.map(e => `- ${e.id} "${e.name}" [${e.domain}/${e.priority}/${e.status.toUpperCase()}] ${e.progress}% complete — ${e.objective.slice(0, 80)}`).join('\n')}
+
+Crew max fatigue: ${crewMaxFatigue.toFixed(0)}%
+Active system anomalies: ${activeAlertSystems.length > 0 ? activeAlertSystems.join(', ') : 'None'}
+
+What is the single most important research action to take next?`
+}
+
+function localResearchRecommendation(experiments: Experiment[], crewMaxFatigue: number, activeAlertSystems: string[]): ResearchRecommendation {
+  const hasLifeSupportAnomaly = activeAlertSystems.some(s => s === 'Power' || s === 'ECLSS')
+  const atRisk   = experiments.filter(e => e.status === 'critical' && e.progress < 100)
+  const p1       = experiments.filter(e => e.priority === 'P1' && e.status !== 'critical' && e.progress < 100)
+  const warning  = experiments.filter(e => e.status === 'warning' && e.progress < 100)
+  const crewTired = crewMaxFatigue > 60
+
+  // If life support anomalies are active, defer non-critical science
+  if (hasLifeSupportAnomaly && crewMaxFatigue > 70) {
+    return {
+      action: 'Suspend non-critical science operations and focus crew on resolving active system anomalies before resuming experiments.',
+      rationale: 'Active power/ECLSS anomalies with high crew fatigue make experiment work unsafe; crew safety takes priority.',
+      urgency: 'immediate',
+      experimentId: null,
+      generatedBy: 'local',
+    }
+  }
+
+  // At-risk P1 experiment
+  if (atRisk.length > 0) {
+    const exp = atRisk.find(e => e.priority === 'P1') ?? atRisk[0]
+    return {
+      action: `Intervene immediately on ${exp.id} "${exp.name}" — conduct diagnostic check and attempt to recover before data loss.`,
+      rationale: `${exp.name} is at critical risk at ${exp.progress}% completion; this is a ${exp.priority} mission objective that cannot be extended.`,
+      urgency: 'immediate',
+      experimentId: exp.id,
+      generatedBy: 'local',
+    }
+  }
+
+  // Warning P1 experiment
+  if (warning.length > 0 && !crewTired) {
+    const exp = warning.find(e => e.priority === 'P1') ?? warning[0]
+    return {
+      action: `Advance ${exp.id} "${exp.name}" during the next available crew window to prevent it from slipping to critical status.`,
+      rationale: `${exp.name} is flagged at warning; early intervention at ${exp.progress}% will protect this ${exp.priority} priority experiment.`,
+      urgency: 'next-shift',
+      experimentId: exp.id,
+      generatedBy: 'local',
+    }
+  }
+
+  // P1 experiment still in progress
+  if (p1.length > 0 && !crewTired) {
+    const exp = p1[0]
+    return {
+      action: `Continue scheduled runs for ${exp.id} "${exp.name}" — this ${exp.priority} experiment is on track at ${exp.progress}%.`,
+      rationale: `No critical anomalies; crew capacity sufficient to advance highest-priority science objective.`,
+      urgency: 'routine',
+      experimentId: exp.id,
+      generatedBy: 'local',
+    }
+  }
+
+  // Crew rest needed
+  if (crewTired) {
+    return {
+      action: 'Prioritize crew rest this shift; schedule next experiment run for the following duty period when fatigue levels recover.',
+      rationale: `Crew fatigue at ${crewMaxFatigue.toFixed(0)}% — performing complex experiment procedures at this level increases error risk.`,
+      urgency: 'next-shift',
+      experimentId: null,
+      generatedBy: 'local',
+    }
+  }
+
+  return {
+    action: 'All experiments are on track — continue nominal science operations per the scheduled daily plan.',
+    rationale: 'No anomalies, no at-risk experiments, crew fatigue acceptable.',
+    urgency: 'routine',
+    experimentId: null,
+    generatedBy: 'local',
+  }
+}
+
+export async function recommendResearchAction(
+  experiments: Experiment[],
+  crewMaxFatigue: number,
+  activeAlertSystems: string[]
+): Promise<ResearchRecommendation> {
+  const local = () => localResearchRecommendation(experiments, crewMaxFatigue, activeAlertSystems)
+  try {
+    if (hasWatsonx()) {
+      const prompt = `${RESEARCH_SYSTEM}\n\n${buildResearchPrompt(experiments, crewMaxFatigue, activeAlertSystems)}`
+      const raw = await watsonxGenerate(prompt, 150)
+      if (raw.length > 20) {
+        const atRisk = experiments.filter(e => e.status === 'critical')
+        return {
+          action: raw.trim(),
+          rationale: atRisk.length > 0 ? `${atRisk[0].name} is at critical risk.` : 'Based on current experiment and crew state.',
+          urgency: atRisk.length > 0 ? 'immediate' : 'routine',
+          experimentId: atRisk[0]?.id ?? null,
+          generatedBy: 'watsonx',
+        }
+      }
+    }
+    if (hasOpenAI()) {
+      const raw = await openaiGenerate(RESEARCH_SYSTEM, buildResearchPrompt(experiments, crewMaxFatigue, activeAlertSystems), 150)
+      if (raw.length > 20) {
+        const atRisk = experiments.filter(e => e.status === 'critical')
+        return {
+          action: raw.trim(),
+          rationale: atRisk.length > 0 ? `${atRisk[0].name} is at critical risk.` : 'Based on current experiment and crew state.',
+          urgency: atRisk.length > 0 ? 'immediate' : 'routine',
+          experimentId: atRisk[0]?.id ?? null,
+          generatedBy: 'openai',
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[MCE AI] research recommendation fell back to local:', err)
+  }
+  return local()
 }

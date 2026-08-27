@@ -33,8 +33,67 @@ export interface EclssData {
   bars: TelemetryItem[]
 }
 
+export interface BatteryUnit {
+  id: string
+  charge: number
+  temp: number
+  status: AlertLevel
+  current: number
+  voltage: number
+}
+
+export interface LoadItem {
+  sys: string
+  load: number
+  max: number
+}
+
+export interface PowerData {
+  batteries: BatteryUnit[]
+  totalChargePct: number
+  bat3Alert: { delta: string; hoursToFail: string; status: AlertLevel }
+  loads: LoadItem[]
+  totalLoad: number
+}
+
+export interface CommLink {
+  id: string
+  status: AlertLevel
+  signal: number
+  bw: number
+  latency: number
+}
+
+export interface BwAlloc {
+  type: string
+  bw: number
+  pct: number
+}
+
+export interface CommsData {
+  links: CommLink[]
+  totalBw: number
+  allocation: BwAlloc[]
+}
+
+export interface CrewMember {
+  id: string
+  role: string
+  hr: number
+  hrStatus: AlertLevel
+  spo2: number
+  spo2Status: AlertLevel
+  fatigue: number
+  fatigueStatus: AlertLevel
+  dutyHrs: number
+  restDue: number
+}
+
 export interface TelemetryState {
   eclss: EclssData
+  power: PowerData
+  comms: CommsData
+  crew: CrewMember[]
   alerts: Alert[]
   connected: boolean
   trends: TrendData | null
@@ -92,8 +151,54 @@ const DEFAULT_ALERTS: Alert[] = [
   },
 ]
 
+const DEFAULT_POWER: PowerData = {
+  batteries: [
+    { id: 'BAT-1', charge: 87.0, temp: 24.2, status: 'stable',  current: 12.4, voltage: 28.6 },
+    { id: 'BAT-2', charge: 91.0, temp: 24.8, status: 'stable',  current: 11.8, voltage: 28.9 },
+    { id: 'BAT-3', charge: 62.0, temp: 31.4, status: 'warning', current: 14.2, voltage: 27.1 },
+    { id: 'BAT-4', charge: 94.0, temp: 23.9, status: 'stable',  current: 11.1, voltage: 29.1 },
+  ],
+  totalChargePct: 83.5,
+  bat3Alert: { delta: '2.4', hoursToFail: '62.4', status: 'warning' },
+  loads: [
+    { sys: 'Life Support (ECLSS)', load: 28400, max: 35000 },
+    { sys: 'Thermal Control',      load: 12200, max: 15000 },
+    { sys: 'Guidance & Navigation',load:  8800, max: 10000 },
+    { sys: 'Communications',       load:  6100, max:  8000 },
+    { sys: 'Science Payloads',     load:  9400, max: 12000 },
+    { sys: 'Crew Quarters',        load:  4012, max:  6000 },
+  ],
+  totalLoad: 68912,
+}
+
+const DEFAULT_COMMS: CommsData = {
+  links: [
+    { id: 'TDRS-East', status: 'stable',  signal: 94, bw: 141.0, latency: 640 },
+    { id: 'TDRS-West', status: 'warning', signal: 71, bw:  51.1, latency: 660 },
+    { id: 'Ku-Band',   status: 'stable',  signal: 88, bw:  88.0, latency: 644 },
+    { id: 'UHF EVA',   status: 'stable',  signal: 96, bw:   0.04, latency: 2  },
+  ],
+  totalBw: 280.1,
+  allocation: [
+    { type: 'Telemetry Downlink', bw: 60.8,  pct: 73 },
+    { type: 'Video / Imagery',    bw: 97.5,  pct: 54 },
+    { type: 'Voice Comm',         bw: 10.4,  pct: 100 },
+    { type: 'Science Data',       bw: 79.5,  pct: 39 },
+    { type: 'Software Updates',   bw: 34.7,  pct: 24 },
+  ],
+}
+
+const DEFAULT_CREW: CrewMember[] = [
+  { id: 'CDR Williams',  role: 'Commander',         hr: 72, hrStatus: 'stable', spo2: 98.0, spo2Status: 'stable', fatigue: 22.0, fatigueStatus: 'stable', dutyHrs: 6.5, restDue: 1.5 },
+  { id: 'PLT Borisenko', role: 'Pilot',              hr: 68, hrStatus: 'stable', spo2: 97.5, spo2Status: 'stable', fatigue: 31.0, fatigueStatus: 'stable', dutyHrs: 7.2, restDue: 0.8 },
+  { id: 'MS1 Chen',      role: 'Mission Specialist', hr: 75, hrStatus: 'stable', spo2: 98.5, spo2Status: 'stable', fatigue: 18.0, fatigueStatus: 'stable', dutyHrs: 5.8, restDue: 2.2 },
+]
+
 const DEFAULT_STATE: TelemetryState = {
   eclss: DEFAULT_ECLSS,
+  power: DEFAULT_POWER,
+  comms: DEFAULT_COMMS,
+  crew: DEFAULT_CREW,
   alerts: DEFAULT_ALERTS,
   connected: false,
   trends: null,
@@ -119,7 +224,10 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
           if (packet.type === 'init' || packet.type === 'telemetry') {
             setState((prev) => ({
               ...prev,
-              eclss: packet.eclss ?? prev.eclss,
+              eclss:  packet.eclss  ?? prev.eclss,
+              power:  packet.power  ?? prev.power,
+              comms:  packet.comms  ?? prev.comms,
+              crew:   packet.crew   ?? prev.crew,
               alerts: packet.alerts ?? prev.alerts,
               trends: packet.trends ?? prev.trends,
             }))

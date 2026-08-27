@@ -41,11 +41,39 @@ const sensor = {
   scrub:    61.0,   // % load (climbs over time)
   cdra:     50.0,   // % cycle progress
   trace:    16.0,   // % (maps to ppm)
-  // Power
+  // Power — all 4 batteries
+  bat1Temp: 24.2,   // °C — nominal
+  bat1Chg:  87.0,   // %
+  bat2Temp: 24.8,   // °C — nominal
+  bat2Chg:  91.0,   // %
   bat3Temp: 31.4,   // °C — anomaly: rising
   bat3Chg:  62.0,   // %
-  // Comms
-  tdrsWest: 71.0,   // % signal
+  bat4Temp: 23.9,   // °C — nominal
+  bat4Chg:  94.0,   // %
+  // Load distribution (Watts) — slow fluctuation
+  loadEclss:  28400,
+  loadThermal: 12200,
+  loadGnc:     8800,
+  loadComms:   6100,
+  loadScience: 9400,
+  loadCrew:    4012,
+  // Comms — all three links
+  tdrsEast: 94.0,   // % signal — nominal
+  tdrsWest: 71.0,   // % signal — anomaly: degrading
+  kuBand:   88.0,   // % signal — nominal
+  // Crew vitals — 3 crew members
+  crewAHr:   72.0,  // heart rate bpm
+  crewASpO2: 98.0,  // %
+  crewAFatigue: 22.0, // % fatigue (0=fresh, 100=exhausted)
+  crewADuty:  6.5,  // hours on duty this shift
+  crewBHr:   68.0,
+  crewBSpO2: 97.5,
+  crewBFatigue: 31.0,
+  crewBDuty:  7.2,
+  crewCHr:   75.0,
+  crewCSpO2: 98.5,
+  crewCFatigue: 18.0,
+  crewCDuty:  5.8,
 }
 
 // History buffer for trend/prediction (last 60 ticks per key)
@@ -99,14 +127,44 @@ function step() {
   // Trace contaminants
   sensor.trace = clamp(sensor.trace + (Math.random() - 0.5) * 0.4, 5, 40)
 
-  // BAT-3 — anomaly: rising temp; normal: gentle drift
-  const batDrift = anomalies.has('bat3') ? rand(0.01, 0.05) : (Math.random() - 0.5) * 0.08
+  // Batteries — BAT-1, BAT-2, BAT-4 gentle nominal drift; BAT-3 anomaly
+  sensor.bat1Temp = clamp(sensor.bat1Temp + (Math.random() - 0.5) * 0.06, 22, 28)
+  sensor.bat1Chg  = clamp(sensor.bat1Chg  - rand(0.003, 0.008), 0, 100)
+  sensor.bat2Temp = clamp(sensor.bat2Temp + (Math.random() - 0.5) * 0.06, 22, 28)
+  sensor.bat2Chg  = clamp(sensor.bat2Chg  - rand(0.003, 0.008), 0, 100)
+  const batDrift  = anomalies.has('bat3') ? rand(0.01, 0.05) : (Math.random() - 0.5) * 0.08
   sensor.bat3Temp = clamp(sensor.bat3Temp + batDrift, 24, 45)
-  sensor.bat3Chg  = clamp(sensor.bat3Chg - 0.01, 0, 100)
+  sensor.bat3Chg  = clamp(sensor.bat3Chg  - rand(0.005, 0.015), 0, 100)
+  sensor.bat4Temp = clamp(sensor.bat4Temp + (Math.random() - 0.5) * 0.06, 22, 28)
+  sensor.bat4Chg  = clamp(sensor.bat4Chg  - rand(0.003, 0.008), 0, 100)
 
-  // TDRS-West — anomaly: degrading signal
+  // Load distribution — gentle ±1% fluctuation per subsystem
+  sensor.loadEclss   = clamp(sensor.loadEclss   + (Math.random() - 0.5) * 200, 24000, 33000)
+  sensor.loadThermal = clamp(sensor.loadThermal + (Math.random() - 0.5) * 150, 10000, 15000)
+  sensor.loadGnc     = clamp(sensor.loadGnc     + (Math.random() - 0.5) * 100,  7500, 10500)
+  sensor.loadComms   = clamp(sensor.loadComms   + (Math.random() - 0.5) *  80,  5000,  8500)
+  sensor.loadScience = clamp(sensor.loadScience + (Math.random() - 0.5) * 120,  7500, 12000)
+  sensor.loadCrew    = clamp(sensor.loadCrew    + (Math.random() - 0.5) *  60,  3000,  5500)
+
+  // Comms links — TDRS-East and Ku-Band nominal; TDRS-West anomaly
+  sensor.tdrsEast = clamp(sensor.tdrsEast + (Math.random() - 0.5) * 0.2,  85, 100)
   const tdrsDrift = anomalies.has('comms') ? -rand(0.05, 0.2) : (Math.random() - 0.5) * 0.3
   sensor.tdrsWest = clamp(sensor.tdrsWest + tdrsDrift, 0, 100)
+  sensor.kuBand   = clamp(sensor.kuBand   + (Math.random() - 0.5) * 0.25, 75, 100)
+
+  // Crew vitals — slow physiological drift
+  sensor.crewAHr      = clamp(sensor.crewAHr      + (Math.random() - 0.5) * 1.2, 58, 90)
+  sensor.crewASpO2    = clamp(sensor.crewASpO2    + (Math.random() - 0.5) * 0.2, 95, 100)
+  sensor.crewAFatigue = clamp(sensor.crewAFatigue + rand(0.005, 0.02),            0,  100)
+  sensor.crewADuty    = clamp(sensor.crewADuty    + 1/3600,                       0,   16)
+  sensor.crewBHr      = clamp(sensor.crewBHr      + (Math.random() - 0.5) * 1.2, 58, 90)
+  sensor.crewBSpO2    = clamp(sensor.crewBSpO2    + (Math.random() - 0.5) * 0.2, 95, 100)
+  sensor.crewBFatigue = clamp(sensor.crewBFatigue + rand(0.005, 0.02),            0,  100)
+  sensor.crewBDuty    = clamp(sensor.crewBDuty    + 1/3600,                       0,   16)
+  sensor.crewCHr      = clamp(sensor.crewCHr      + (Math.random() - 0.5) * 1.2, 58, 90)
+  sensor.crewCSpO2    = clamp(sensor.crewCSpO2    + (Math.random() - 0.5) * 0.2, 95, 100)
+  sensor.crewCFatigue = clamp(sensor.crewCFatigue + rand(0.005, 0.02),            0,  100)
+  sensor.crewCDuty    = clamp(sensor.crewCDuty    + 1/3600,                       0,   16)
 
   // Push to history
   for (const key of Object.keys(sensor)) pushHistory(key, sensor[key])
@@ -118,7 +176,12 @@ function step() {
   const humStatus    = sensor.humidity > 90 ? 'critical' : sensor.humidity > 80 ? 'warning' : 'stable'
   const scrubStatus  = sensor.scrub > 85    ? 'critical' : sensor.scrub > 60 ? 'warning' : 'stable'
   const batStatus    = sensor.bat3Temp > 38 ? 'critical' : sensor.bat3Temp > 32 ? 'warning' : 'stable'
-  const commsStatus  = sensor.tdrsWest < 30 ? 'critical' : sensor.tdrsWest < 60 ? 'warning' : 'stable'
+  const tdrsEastStatus = sensor.tdrsEast < 50 ? 'critical' : sensor.tdrsEast < 75 ? 'warning' : 'stable'
+  const commsStatus    = sensor.tdrsWest < 30 ? 'critical' : sensor.tdrsWest < 60 ? 'warning' : 'stable'
+  const kuBandStatus   = sensor.kuBand   < 50 ? 'critical' : sensor.kuBand   < 75 ? 'warning' : 'stable'
+  const crewAFatStatus = sensor.crewAFatigue > 75 ? 'critical' : sensor.crewAFatigue > 50 ? 'warning' : 'stable'
+  const crewBFatStatus = sensor.crewBFatigue > 75 ? 'critical' : sensor.crewBFatigue > 50 ? 'warning' : 'stable'
+  const crewCFatStatus = sensor.crewCFatigue > 75 ? 'critical' : sensor.crewCFatigue > 50 ? 'warning' : 'stable'
 
   const cdraStep = Math.min(8, Math.max(0, Math.round(sensor.cdra / 12.5)))
   const traceVal = (sensor.trace / 20).toFixed(1)
@@ -142,9 +205,16 @@ function step() {
     ],
   }
 
+  // Battery aggregate: weighted average charge across all 4
+  const totalChg = (sensor.bat1Chg + sensor.bat2Chg + sensor.bat3Chg + sensor.bat4Chg) / 4
+  const totalChgPct = Math.round(totalChg * 10) / 10
+
   // BAT-3 delta from 29°C baseline
-  const batDelta = (sensor.bat3Temp - 29).toFixed(1)
+  const batDelta = Math.max(0, sensor.bat3Temp - 29).toFixed(1)
   const hoursToFail = Math.max(0.5, ((45 - sensor.bat3Temp) / 0.25)).toFixed(1)
+
+  // Total load
+  const totalLoad = sensor.loadEclss + sensor.loadThermal + sensor.loadGnc + sensor.loadComms + sensor.loadScience + sensor.loadCrew
 
   const newAlerts = [
     {
@@ -183,6 +253,80 @@ function step() {
     },
   ]
 
+  // Power data packet
+  const power = {
+    batteries: [
+      { id: 'BAT-1', charge: +sensor.bat1Chg.toFixed(1), temp: +sensor.bat1Temp.toFixed(1), status: sensor.bat1Temp > 38 ? 'critical' : sensor.bat1Temp > 32 ? 'warning' : 'stable', current: +(11.8 + (Math.random() - 0.5) * 0.4).toFixed(1), voltage: +(28.8 + (sensor.bat1Chg - 87) * 0.01 + (Math.random() - 0.5) * 0.05).toFixed(1) },
+      { id: 'BAT-2', charge: +sensor.bat2Chg.toFixed(1), temp: +sensor.bat2Temp.toFixed(1), status: sensor.bat2Temp > 38 ? 'critical' : sensor.bat2Temp > 32 ? 'warning' : 'stable', current: +(11.5 + (Math.random() - 0.5) * 0.4).toFixed(1), voltage: +(28.9 + (sensor.bat2Chg - 91) * 0.01 + (Math.random() - 0.5) * 0.05).toFixed(1) },
+      { id: 'BAT-3', charge: +sensor.bat3Chg.toFixed(1), temp: +sensor.bat3Temp.toFixed(1), status: batStatus,                                                                          current: +(14.0 + (Math.random() - 0.5) * 0.5).toFixed(1), voltage: +(27.0 + (sensor.bat3Chg - 62) * 0.01 + (Math.random() - 0.5) * 0.05).toFixed(1) },
+      { id: 'BAT-4', charge: +sensor.bat4Chg.toFixed(1), temp: +sensor.bat4Temp.toFixed(1), status: sensor.bat4Temp > 38 ? 'critical' : sensor.bat4Temp > 32 ? 'warning' : 'stable', current: +(11.0 + (Math.random() - 0.5) * 0.4).toFixed(1), voltage: +(29.1 + (sensor.bat4Chg - 94) * 0.01 + (Math.random() - 0.5) * 0.05).toFixed(1) },
+    ],
+    totalChargePct: totalChgPct,
+    bat3Alert: { delta: batDelta, hoursToFail, status: batStatus },
+    loads: [
+      { sys: 'Life Support (ECLSS)', load: Math.round(sensor.loadEclss),   max: 35000 },
+      { sys: 'Thermal Control',      load: Math.round(sensor.loadThermal), max: 15000 },
+      { sys: 'Guidance & Navigation',load: Math.round(sensor.loadGnc),     max: 10000 },
+      { sys: 'Communications',       load: Math.round(sensor.loadComms),   max:  8000 },
+      { sys: 'Science Payloads',     load: Math.round(sensor.loadScience), max: 12000 },
+      { sys: 'Crew Quarters',        load: Math.round(sensor.loadCrew),    max:  6000 },
+    ],
+    totalLoad: Math.round(totalLoad),
+  }
+
+  // Comms data packet — bandwidth derived from signal % × max rated capacity
+  // TDRS-East: 150 Mbps max, TDRS-West: 72 Mbps max, Ku-Band: 100 Mbps max, UHF EVA: 0.3 Mbps fixed
+  const tdrsEastBw = +(sensor.tdrsEast / 100 * 150).toFixed(1)
+  const tdrsWestBw = +(sensor.tdrsWest / 100 * 72).toFixed(1)
+  const kuBandBw   = +(sensor.kuBand   / 100 * 100).toFixed(1)
+  const uhfBw      = 0.04
+  const totalBw    = +(tdrsEastBw + tdrsWestBw + kuBandBw + uhfBw).toFixed(1)
+
+  const comms = {
+    links: [
+      { id: 'TDRS-East', status: tdrsEastStatus, signal: +sensor.tdrsEast.toFixed(0), bw: tdrsEastBw, latency: 640 },
+      { id: 'TDRS-West', status: commsStatus,    signal: +sensor.tdrsWest.toFixed(0), bw: tdrsWestBw, latency: 660 },
+      { id: 'Ku-Band',   status: kuBandStatus,   signal: +sensor.kuBand.toFixed(0),   bw: kuBandBw,   latency: 644 },
+      { id: 'UHF EVA',   status: 'stable',       signal: 96,                          bw: uhfBw,      latency: 2   },
+    ],
+    totalBw,
+    // Bandwidth allocation derived proportionally from total available
+    allocation: [
+      { type: 'Telemetry Downlink', bw: +(totalBw * 0.217).toFixed(1), pct: Math.round(sensor.tdrsEast * 0.78) },
+      { type: 'Video / Imagery',    bw: +(totalBw * 0.348).toFixed(1), pct: Math.round(sensor.tdrsWest * 0.63 + sensor.tdrsEast * 0.1) > 100 ? 100 : Math.round(sensor.tdrsWest * 0.63 + sensor.tdrsEast * 0.1) },
+      { type: 'Voice Comm',         bw: +(totalBw * 0.037).toFixed(1), pct: 100 },
+      { type: 'Science Data',       bw: +(totalBw * 0.284).toFixed(1), pct: Math.round(sensor.kuBand * 0.44) },
+      { type: 'Software Updates',   bw: +(totalBw * 0.124).toFixed(1), pct: Math.round(sensor.kuBand * 0.22 + sensor.tdrsEast * 0.05) },
+    ],
+  }
+
+  // Crew data packet
+  const hrStatus  = (hr) => hr > 85 ? 'warning' : hr < 60 ? 'warning' : 'stable'
+  const spo2Status = (s) => s < 96 ? 'critical' : s < 97 ? 'warning' : 'stable'
+  const crew = [
+    {
+      id: 'CDR Williams', role: 'Commander',
+      hr: +sensor.crewAHr.toFixed(0), hrStatus: hrStatus(sensor.crewAHr),
+      spo2: +sensor.crewASpO2.toFixed(1), spo2Status: spo2Status(sensor.crewASpO2),
+      fatigue: +sensor.crewAFatigue.toFixed(1), fatigueStatus: crewAFatStatus,
+      dutyHrs: +sensor.crewADuty.toFixed(1), restDue: +(8 - sensor.crewADuty).toFixed(1),
+    },
+    {
+      id: 'PLT Borisenko', role: 'Pilot',
+      hr: +sensor.crewBHr.toFixed(0), hrStatus: hrStatus(sensor.crewBHr),
+      spo2: +sensor.crewBSpO2.toFixed(1), spo2Status: spo2Status(sensor.crewBSpO2),
+      fatigue: +sensor.crewBFatigue.toFixed(1), fatigueStatus: crewBFatStatus,
+      dutyHrs: +sensor.crewBDuty.toFixed(1), restDue: +(8 - sensor.crewBDuty).toFixed(1),
+    },
+    {
+      id: 'MS1 Chen', role: 'Mission Specialist',
+      hr: +sensor.crewCHr.toFixed(0), hrStatus: hrStatus(sensor.crewCHr),
+      spo2: +sensor.crewCSpO2.toFixed(1), spo2Status: spo2Status(sensor.crewCSpO2),
+      fatigue: +sensor.crewCFatigue.toFixed(1), fatigueStatus: crewCFatStatus,
+      dutyHrs: +sensor.crewCDuty.toFixed(1), restDue: +(8 - sensor.crewCDuty).toFixed(1),
+    },
+  ]
+
   // Telemetry history snapshot for AI anomaly detection (last 30 ticks)
   const trends = {
     bat3Temp:   history.bat3Temp.slice(-30),
@@ -193,7 +337,7 @@ function step() {
     scrub:      history.scrub.slice(-30),
   }
 
-  return { eclss, alerts: newAlerts, trends }
+  return { eclss, power, comms, crew, alerts: newAlerts, trends }
 }
 
 // ── HTTP server (telemetry state + anomaly injection endpoint) ─────────────

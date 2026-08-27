@@ -1,0 +1,312 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mission Consequence Engine — Overview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    background: #ffffff;
+    color: #1f2328;
+    padding: 32px 20px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 24px;
+    background: #0a0f1a;
+    border-radius: 6px;
+    margin-bottom: 28px;
+  }
+  .hero-icon {
+    flex-shrink: 0;
+    width: 64px; height: 64px;
+    position: relative;
+  }
+  .hero-icon svg { width: 100%; height: 100%; }
+  .hero-text h1 {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.22em;
+    color: #00d4ff;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .hero-text p {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: rgba(0,212,255,0.55);
+    text-transform: uppercase;
+  }
+
+  /* ── Tagline ── */
+  .tagline {
+    font-size: 15px;
+    color: #57606a;
+    margin-bottom: 28px;
+    border-left: 3px solid #3b82d4;
+    padding-left: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Section headings ── */
+  h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #57606a;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  section { margin-bottom: 28px; }
+
+  /* ── Capability cards ── */
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 540px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 14px 16px;
+  }
+  .card-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3b82d4;
+    margin-bottom: 5px;
+  }
+  .card p { font-size: 13px; color: #1f2328; line-height: 1.55; }
+
+  /* ── Feature list ── */
+  .feat-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .feat-list li {
+    display: flex;
+    gap: 10px;
+    font-size: 13.5px;
+    color: #1f2328;
+    align-items: flex-start;
+  }
+  .feat-list li .dot {
+    flex-shrink: 0;
+    margin-top: 5px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #3b82d4;
+  }
+
+  /* ── NASA data note ── */
+  .data-note {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #0369a1;
+    line-height: 1.55;
+  }
+  .data-note strong { color: #0c4a6e; }
+
+  /* ── Two-col text ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 540px) { .two-col { grid-template-columns: 1fr; } }
+  .two-col p { font-size: 13px; color: #1f2328; line-height: 1.6; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #57606a;
+    padding: 6px 10px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+    color: #1f2328;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; color: #3b82d4; white-space: nowrap; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  
+  <div class="hero">
+    <div class="hero-icon">
+      <svg xmlns="http://www.w3.org/2000/svg">
+        <circle cx="256" cy="256" r="220" fill="none" stroke="#00d4ff" stroke-width="6" stroke-opacity="0.20"></circle>
+        <circle cx="256" cy="256" r="172" fill="none" stroke="#00d4ff" stroke-width="8" stroke-opacity="0.35"></circle>
+        <circle cx="256" cy="256" r="120" fill="none" stroke="#00d4ff" stroke-width="10" stroke-opacity="0.65"></circle>
+        <circle cx="256" cy="256" r="68" fill="none" stroke="#00d4ff" stroke-width="14" stroke-opacity="0.95"></circle>
+        <line x1="256" y1="20" x2="256" y2="492" stroke="#00d4ff" stroke-width="3" stroke-opacity="0.35"></line>
+        <line x1="20" y1="256" x2="492" y2="256" stroke="#00d4ff" stroke-width="3" stroke-opacity="0.35"></line>
+        <path d="M256 256 L256 36 A220 220 0 0 1 411 367 Z" fill="rgba(0,212,255,0.14)" stroke="#00d4ff" stroke-width="2" stroke-opacity="0.55"></path>
+        <circle cx="256" cy="256" r="32" fill="rgba(0,212,255,0.25)"></circle>
+        <circle cx="256" cy="256" r="18" fill="#00d4ff"></circle>
+        <circle cx="256" cy="36" r="14" fill="#00d4ff"></circle>
+        <circle cx="411" cy="367" r="10" fill="#00d4ff" fill-opacity="0.85"></circle>
+        <circle cx="101" cy="367" r="10" fill="#00d4ff" fill-opacity="0.85"></circle>
+        <circle cx="256" cy="136" r="8" fill="#00d4ff" fill-opacity="0.70"></circle>
+      </svg>
+    </div>
+    <div class="hero-text">
+      <h1>MCE</h1>
+      <p>Mission Consequence Engine</p>
+    </div>
+  </div>
+
+  
+  <p class="tagline">
+    A real-time AI-augmented spacecraft operations dashboard for crewed space missions — combining live sensor telemetry, predictive anomaly detection, emergency procedure guidance, and science mission management in a single progressive web app.
+  </p>
+
+  
+  <section>
+    <h2>What it is</h2>
+    <div class="two-col">
+      <p>
+        MCE is a <strong>mission control interface</strong> designed to run aboard or alongside a crewed spacecraft. It streams live telemetry from all critical spacecraft systems — atmosphere, power, communications, and crew — and uses an AI layer to continuously interpret that data, surface threats before they become emergencies, and recommend the next safest action.
+      </p>
+      <p>
+        It is built as a <strong>Progressive Web App (PWA)</strong>, meaning it installs directly to any device, works fully offline using cached procedures and sensor defaults, and reconnects automatically whenever the telemetry link is restored. The entire interface is designed for use under stress — monospace data, colour-coded severity levels, and zero-click emergency overlays.
+      </p>
+    </div>
+  </section>
+
+  
+  <section>
+    <h2>Five operational systems</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Life Support — ECLSS</div>
+        <p>Live O₂ level, CO₂ concentration, cabin temperature, humidity, pressure, N₂ partial pressure, water recovery rate, CO₂ scrubber load, and trace contaminants — all as animated radial and bar gauges updated every second with status thresholds.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Power &amp; Energy</div>
+        <p>Four-battery state-of-charge with live temperature, voltage, and current. Aggregate main-power gauge, solar array output vs. total consumption, net balance, and a per-subsystem load distribution showing which spacecraft systems are drawing the most power.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Communications</div>
+        <p>Three communication links (TDRS-East, TDRS-West, Ku-Band, UHF EVA) with live Mbps bandwidth scaled from signal strength. Total available bandwidth rollup, per-service allocation, and four ground station countdowns ticking in real time toward the next AOS window.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Mission &amp; Crew</div>
+        <p>UTC-driven mission schedule with a live active-event marker. Per-crewmember vitals (heart rate, SpO₂, fatigue %) updated each second. Scientific experiments tracked by priority and status, enriched with real ISS experiment metadata from NASA OSDR.</p>
+      </div>
+    </div>
+  </section>
+
+  
+  <section>
+    <h2>AI capabilities</h2>
+    <ul class="feat-list">
+      <li><span class="dot"></span><strong>Threat narrative summary</strong> — generates a plain-English 3-sentence mission status brief every 30 seconds, including active alerts, atmospheric readings, and at-risk experiments. Runs on IBM watsonx, OpenAI, or a fully local deterministic engine.</li>
+      <li><span class="dot"></span><strong>Predictive anomaly detection</strong> — applies least-squares linear regression to the last 30 seconds of sensor history for 6 sensors (BAT-3 temp, CO₂, O₂, humidity, TDRS-West signal, CO₂ scrubber load). Computes time-to-breach for each threshold and ranks predictions by severity.</li>
+      <li><span class="dot"></span><strong>Crisis decision scoring</strong> — when a critical alert fires, the Crisis Panel presents three response options and scores each 0–100 for crew safety using live sensor context (battery temp trajectory, O₂ level, backup reserve, comms signal). Flags the recommended option.</li>
+      <li><span class="dot"></span><strong>Emergency procedure Q&amp;A</strong> — crew can ask natural-language questions ("what do I do if CO₂ is rising?") and receive step-by-step procedure answers from a bundled knowledge base covering 7 emergency types. Fully offline — procedures are bundled at build time.</li>
+      <li><span class="dot"></span><strong>Research action recommendation</strong> — analyses active experiment status, priority (P1/P2/P3), crew fatigue, and any active system anomalies to recommend the single most important science action for the current shift. Defers science when crew safety is at risk.</li>
+    </ul>
+  </section>
+
+  
+  <section>
+    <h2>NASA open data integration</h2>
+    <div class="data-note">
+      <strong>NASA Open Science Data Repository (OSDR)</strong> — experiment metadata is fetched live from <code>osdr.nasa.gov</code> at app load, bringing in real ISS study titles, scientific objectives, and domain classifications (Biology, Plant Science, Physics, Materials Science, Human Research, Earth Observation, Technology Demo). When the API is unreachable the app falls back to a curated offline set of five real published ISS studies including OSD-100 (Rodent Research-1) and OSD-37 (GeneLab Plant Experiment-1), with accurate objectives and direct links back to the OSDR dataset records.
+    </div>
+  </section>
+
+  
+  <section>
+    <h2>Value for space exploration</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>How MCE helps</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Communication blackout</td>
+          <td>Offline mode activates automatically. Cached emergency procedures, anomaly detection, and AI scoring continue working with no network. UHF EVA link is preserved as last-resort comms.</td>
+        </tr>
+        <tr>
+          <td>Battery thermal runaway</td>
+          <td>BAT-3 temp trend triggers a predictive warning with estimated time-to-breach. The Crisis Panel scores three load-shedding options against live sensor state and recommends the safest one.</td>
+        </tr>
+        <tr>
+          <td>CO₂ scrubber nearing depletion</td>
+          <td>Scrubber load bar turns amber and a LiOH canister swap warning appears. AI summary includes the depletion timeline. Crew can ask the procedure Q&amp;A for exact swap steps.</td>
+        </tr>
+        <tr>
+          <td>Crew fatigue risk</td>
+          <td>Per-crewmember fatigue accumulates in real time. When any crew member exceeds the warning threshold, the research recommendation switches from "advance experiments" to "prioritise crew rest".</td>
+        </tr>
+        <tr>
+          <td>Science prioritisation</td>
+          <td>Experiments are sorted by P1/P2/P3 priority and status. At-risk P1 experiments trigger a red callout and an immediate-urgency research action. The AI brief includes experiment names in the threat narrative.</td>
+        </tr>
+        <tr>
+          <td>Multi-system degradation</td>
+          <td>The sidebar alert panel ranks all active alerts by severity and prediction. The AI anomaly panel shows every sensor trend simultaneously so the crew sees the full threat picture at a glance.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  
+  <section>
+    <h2>Technical architecture</h2>
+    <ul class="feat-list">
+      <li><span class="dot"></span><strong>React 19 + TypeScript + Vite 8</strong> — compiled PWA, installable on any OS.</li>
+      <li><span class="dot"></span><strong>WebSocket telemetry server</strong> — Node.js server emitting 1 Hz sensor packets across 25+ sensor channels. Supports anomaly injection via HTTP POST for training and simulation.</li>
+      <li><span class="dot"></span><strong>TelemetryContext</strong> — single React context distributing live sensor state to all tabs simultaneously with automatic reconnection on link loss.</li>
+      <li><span class="dot"></span><strong>AI provider cascade</strong> — IBM watsonx → OpenAI → local deterministic engine, selected automatically from environment variables. No API key = fully local, always works.</li>
+      <li><span class="dot"></span><strong>Offline-first</strong> — emergency procedures, sensor defaults, experiment baseline, and all UI assets are bundled. The app is fully functional with zero network connectivity.</li>
+    </ul>
+  </section>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>

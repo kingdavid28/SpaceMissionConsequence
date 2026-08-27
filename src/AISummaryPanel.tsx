@@ -87,7 +87,7 @@ export default function AISummaryPanel() {
           }} />
           <span style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
@@ -97,7 +97,7 @@ export default function AISummaryPanel() {
           </span>
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 9,
+            fontSize: 11,
             padding: '1px 5px',
             background: 'rgba(0,212,255,0.08)',
             border: '1px solid rgba(0,212,255,0.2)',
@@ -110,7 +110,7 @@ export default function AISummaryPanel() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {lastRefresh && (
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
               {lastRefresh.toISOString().slice(11, 19)} UTC
             </span>
           )}
@@ -119,7 +119,7 @@ export default function AISummaryPanel() {
             disabled={loading}
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              fontSize: 11,
               color: loading ? 'var(--color-muted-foreground)' : 'var(--color-primary)',
               background: 'none',
               border: '1px solid var(--color-border)',
@@ -139,7 +139,7 @@ export default function AISummaryPanel() {
         {loading && !result ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted-foreground)',
+            fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--color-muted-foreground)',
           }}>
             <span className="blink">▮</span>
             <span>Analyzing mission status…</span>
@@ -149,7 +149,7 @@ export default function AISummaryPanel() {
             {/* Risk badge */}
             <span style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              fontSize: 11,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
               color: riskColor[risk],
@@ -163,7 +163,7 @@ export default function AISummaryPanel() {
             </span>
             <p style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 12,
+              fontSize: 14,
               lineHeight: 1.65,
               color: 'var(--color-card-foreground)',
               margin: '8px 0 0',

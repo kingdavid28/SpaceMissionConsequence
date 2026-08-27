@@ -136,7 +136,7 @@ function ToastItem({
       {/* Icon */}
       <span style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 14,
+        fontSize: 16,
         color,
         flexShrink: 0,
         marginTop: 1,
@@ -150,7 +150,7 @@ function ToastItem({
         <div style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
-          fontSize: 12,
+          fontSize: 13,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
           color,
@@ -161,7 +161,7 @@ function ToastItem({
         {toast.body && (
           <div style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 11,
+            fontSize: 13,
             color: 'var(--color-card-foreground)',
             lineHeight: 1.5,
           }}>
@@ -180,7 +180,7 @@ function ToastItem({
           cursor: 'pointer',
           color: 'var(--color-muted-foreground)',
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          fontSize: 13,
           padding: '0 2px',
           flexShrink: 0,
           lineHeight: 1,

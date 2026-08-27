@@ -96,7 +96,7 @@ export default function ProcedureQA() {
             disabled={loading}
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              fontSize: 11,
               color: 'var(--color-primary)',
               background: 'rgba(0,212,255,0.05)',
               border: '1px solid rgba(0,212,255,0.2)',
@@ -138,7 +138,7 @@ export default function ProcedureQA() {
             }}>
               <pre style={{
                 fontFamily: msg.role === 'assistant' ? 'var(--font-mono)' : 'var(--font-body)',
-                fontSize: 11,
+                fontSize: 13,
                 color: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-card-foreground)',
                 margin: 0,
                 whiteSpace: 'pre-wrap',
@@ -153,7 +153,7 @@ export default function ProcedureQA() {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {msg.role === 'assistant' && msg.ref && (
                 <span style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 9,
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
                   color: 'var(--color-primary)',
                   padding: '1px 5px',
                   background: 'rgba(0,212,255,0.06)',
@@ -166,14 +166,14 @@ export default function ProcedureQA() {
               )}
               {msg.role === 'assistant' && msg.provider && (
                 <span style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 9,
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
                   color: 'var(--color-muted-foreground)',
                   letterSpacing: '0.06em',
                 }}>
                   via {PROVIDER_LABEL[msg.provider] ?? msg.provider}
                 </span>
               )}
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted-foreground)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
                 {msg.ts.toISOString().slice(11, 19)} UTC
               </span>
             </div>
@@ -183,7 +183,7 @@ export default function ProcedureQA() {
         {loading && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted-foreground)',
+            fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--color-muted-foreground)',
           }}>
             <span className="blink">▮</span>
             <span>Consulting procedure manual…</span>
@@ -208,7 +208,7 @@ export default function ProcedureQA() {
           style={{
             flex: 1,
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 13,
             color: 'var(--color-foreground)',
             background: 'var(--color-raised)',
             border: '1px solid var(--color-border)',
@@ -223,7 +223,7 @@ export default function ProcedureQA() {
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 700,
-            fontSize: 11,
+            fontSize: 13,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: input.trim() && !loading ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',

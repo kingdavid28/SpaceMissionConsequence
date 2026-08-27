@@ -1,13 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#060a10"/>
-  <circle cx="256" cy="256" r="148" fill="none" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
-  <circle cx="256" cy="256" r="110" fill="none" stroke="rgba(0,212,255,0.35)" stroke-width="2"/>
-  <circle cx="256" cy="256" r="72" fill="none" stroke="rgba(0,212,255,0.6)" stroke-width="3"/>
-  <circle cx="256" cy="256" r="40" fill="none" stroke="#00d4ff" stroke-width="5"/>
-  <circle cx="256" cy="256" r="14" fill="#00d4ff"/>
-  <circle cx="256" cy="144" r="10" fill="#00d4ff"/>
-  <circle cx="344" cy="212" r="6" fill="rgba(0,212,255,0.6)"/>
-  <circle cx="168" cy="300" r="6" fill="rgba(0,212,255,0.6)"/>
-  <text x="256" y="430" text-anchor="middle" font-family="monospace" font-size="44" font-weight="bold" letter-spacing="10" fill="#00d4ff">MCE</text>
-  <text x="256" y="464" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="3" fill="rgba(0,212,255,0.45)">MISSION CONSEQUENCE ENGINE</text>
+  <!--
+    MCE — Mission Consequence Engine
+    Pure icon mark, no text. Designed to read clearly at 40–48 px.
+    Transparent background for dark + light mode compatibility.
+  -->
+
+  <!-- Radar rings — thick strokes, high contrast -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#00d4ff" stroke-width="6"  stroke-opacity="0.20"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#00d4ff" stroke-width="8"  stroke-opacity="0.35"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#00d4ff" stroke-width="10" stroke-opacity="0.60"/>
+  <circle cx="256" cy="256" r="68"  fill="none" stroke="#00d4ff" stroke-width="14" stroke-opacity="0.90"/>
+
+  <!-- Cross-hairs -->
+  <line x1="256" y1="20"  x2="256" y2="492" stroke="#00d4ff" stroke-width="3" stroke-opacity="0.35"/>
+  <line x1="20"  y1="256" x2="492" y2="256" stroke="#00d4ff" stroke-width="3" stroke-opacity="0.35"/>
+
+  <!-- Radar sweep wedge — bold fill -->
+  <path d="M256 256 L256 36 A220 220 0 0 1 411 367 Z"
+        fill="rgba(0,212,255,0.14)"
+        stroke="#00d4ff"
+        stroke-width="2"
+        stroke-opacity="0.55"/>
+
+  <!-- Center glow halo -->
+  <circle cx="256" cy="256" r="32" fill="rgba(0,212,255,0.25)"/>
+  <!-- Center solid core -->
+  <circle cx="256" cy="256" r="18" fill="#00d4ff"/>
+
+  <!-- Orbital dots — primary (top, large) -->
+  <circle cx="256" cy="36"  r="14" fill="#00d4ff"/>
+  <!-- Orbital dots — secondary -->
+  <circle cx="411" cy="367" r="10" fill="#00d4ff" fill-opacity="0.85"/>
+  <circle cx="101" cy="367" r="10" fill="#00d4ff" fill-opacity="0.85"/>
+  <!-- Orbital dots — tertiary, on inner ring -->
+  <circle cx="256" cy="136" r="8"  fill="#00d4ff" fill-opacity="0.70"/>
+  <circle cx="356" cy="196" r="6"  fill="#00d4ff" fill-opacity="0.55"/>
 </svg>
